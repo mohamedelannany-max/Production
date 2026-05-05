@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Cairo", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-brand-blue: #1e40af;
+  --color-brand-blue-light: #3b82f6;
+  --color-brand-green: #10b981;
+  --color-brand-red: #ef4444;
+  --color-brand-amber: #f59e0b;
+  --color-brand-purple: #7c3aed;
+  --color-brand-teal: #0f766e;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans;
+    direction: rtl;
+  }
+}
+
+@layer components {
+  .card-shadow {
+    @apply shadow-[0_2px_8px_rgba(0,0,0,0.06)];
+  }
+  
+  .btn-primary {
+    @apply bg-brand-blue text-white hover:bg-blue-800 transition-colors px-4 py-2 rounded-lg font-bold flex items-center gap-2;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue-light focus:border-transparent transition-all;
+  }
+}
