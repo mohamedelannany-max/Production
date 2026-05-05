@@ -92,9 +92,9 @@ async function startServer() {
       de: 'إدارة الإنتاج',
       fc: 'PROD-P02-F05',
       fv: 'Ver.1',
-      gsId: '1xlV7lNu9IVsrMGnTiOjWQg62sAqbmsmVkHtAJ5wv3MY',
+      gsId: '1VLf0w7MRNhoZnEE-ip2YJYKYm5Kwi0DoReaWvH2GqZY',
       gsKey: 'AIzaSyAGtNpNM_Bh0BDH9Jrn56OqNlshKtT7hOA',
-      gsUrl: 'https://script.google.com/macros/s/AKfycbyktPK3ghKwykNNBs5SXyGpEEW06hkaBAFf71ygx5MMFLhwsBiLuHuRfcXbSBcb963ZfA/exec',
+      gsUrl: 'https://script.google.com/macros/s/AKfycbzO6neXwNbgtHuHcOphcmDjBhKb8hug-6XsNaXV63g6p1Z1oSBxwbkhLmWKH8tpou7zMg/exec',
       autoSave: true
     };
     db.prepare("INSERT INTO config (id, data) VALUES (?, ?)").run('default', JSON.stringify(defaultConfig));
@@ -103,8 +103,13 @@ async function startServer() {
     const currentConfigData = db.prepare("SELECT data FROM config WHERE id = 'default'").get() as any;
     if (currentConfigData) {
       const currentConfig = JSON.parse(currentConfigData.data);
-      if (currentConfig.gsUrl && currentConfig.gsUrl.includes("AKfycbxm14VPoLZD4t1g-u4LoinB3klTFpRyk3SeX-cSfMQ1OWryJctq26J8zTnupIOIKbB7")) {
-        currentConfig.gsUrl = "https://script.google.com/macros/s/AKfycbyktPK3ghKwykNNBs5SXyGpEEW06hkaBAFf71ygx5MMFLhwsBiLuHuRfcXbSBcb963ZfA/exec";
+      const oldKeys = [
+        "AKfycbxm14VPoLZD4t1g-u4LoinB3klTFpRyk3SeX-cSfMQ1OWryJctq26J8zTnupIOIKbB7",
+        "AKfycbyktPK3ghKwykNNBs5SXyGpEEW06hkaBAFf71ygx5MMFLhwsBiLuHuRfcXbSBcb963ZfA"
+      ];
+      if (currentConfig.gsUrl && oldKeys.some(k => currentConfig.gsUrl.includes(k))) {
+        currentConfig.gsUrl = "https://script.google.com/macros/s/AKfycbzO6neXwNbgtHuHcOphcmDjBhKb8hug-6XsNaXV63g6p1Z1oSBxwbkhLmWKH8tpou7zMg/exec";
+        currentConfig.gsId = "1VLf0w7MRNhoZnEE-ip2YJYKYm5Kwi0DoReaWvH2GqZY";
         db.prepare("UPDATE config SET data = ? WHERE id = 'default'").run(JSON.stringify(currentConfig));
       }
     }
