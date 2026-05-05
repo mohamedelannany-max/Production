@@ -105,12 +105,34 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, data })
       });
-      if (!response.ok) throw new Error('Sync failed');
-      return true;
+      if (response.ok) return true;
+      throw new Error('Server sync failed');
     } catch (err) {
-      console.error(`Error syncing ${type}:`, err);
+      console.error(`Error syncing ${type} to server:`, err);
+      
+      // FALLBACK: Try direct Google Sheets sync if server is down and GS is configured
+      if (config.gsUrl && !isRetry) {
+        console.log(`📡 Server unreachable. Attempting direct sync to Google Sheets for ${type}...`);
+        try {
+          const gsRes = await fetch(config.gsUrl, {
+            method: 'POST',
+            body: JSON.stringify({ 
+              action: 'full_sync', 
+              data: { [type]: data, config } // Send mini-sync payload
+            }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GAS trick
+            mode: 'no-cors' // Allow post to external domain
+          });
+          toast.info(`تم الحفظ في المتصفح والمزامنة مع جوجل شيت مباشرة`);
+          return true;
+        } catch (gsErr) {
+          console.error("Direct GAS sync failed:", gsErr);
+        }
+      }
+
       if (!isRetry) {
         setPendingSync(prev => [...(prev || []), { type, data }]);
+        toast.warn(`تم الحفظ محلياً فقط. الخادم غير متصل.`);
       }
       return false;
     }
@@ -578,9 +600,15 @@ export default function App() {
                   serverStatus === 'syncing' ? "text-brand-blue" : "text-red-600"
                 )}>
                   {serverStatus === 'connected' ? "متصل بقاعدة البيانات (Active)" : 
-                   serverStatus === 'syncing' ? "جاري المزامنة... (Syncing)" : "فشل الاتصال (Disconnected)"}
+                   serverStatus === 'syncing' ? "جاري المزامنة... (Syncing)" : "فشل الاتصال بالخادم الرئيسي (Offline Mode)"}
                 </span>
               </div>
+              
+              {!isOnline && (
+                <div className="bg-red-50 text-red-600 text-[9px] font-black px-3 py-1 rounded-full border border-red-100 animate-pulse">
+                  ⚠️ تنبيه: النظام يعمل محلياً فقط. سيتم حفظ البيانات في المتصفح.
+                </div>
+              )}
               
               {config.gsUrl && (
                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-400">

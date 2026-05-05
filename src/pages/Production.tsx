@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Order, Formula, Batch, User, Material } from '../types';
 import { cn } from '../lib/utils';
 import Modal from '../components/Modal';
+import { toast } from 'react-toastify';
 
 interface ProductionProps {
   orders: Order[];
@@ -73,8 +74,9 @@ export default function Production({ orders, formulas, materials, currentUser, o
       await onStartBatch(selectedOrderId, batchId);
       setActiveBatchId(batchId);
       setActualWeights({});
+      toast.info(`بدأت الباتشة رقم ${batchId.split('-').pop()}...`);
     } catch (err) {
-      alert('حدث خطأ أثناء بدء الباتشة');
+      toast.error('حدث خطأ أثناء بدء الباتشة');
     } finally {
       setIsStarting(false);
     }
@@ -112,8 +114,9 @@ export default function Production({ orders, formulas, materials, currentUser, o
       setActiveBatchId(null);
       setActualWeights({});
       setIsFinishModalOpen(false);
-    } catch (err) {
-      alert('حدث خطأ أثناء إنهاء الباتشة');
+      toast.success('تم إنهاء الباتشة بنجاح ✅');
+    } catch (err: any) {
+      toast.error(err.message || 'حدث خطأ أثناء إنهاء الباتشة');
     } finally {
       setIsFinishing(false);
     }

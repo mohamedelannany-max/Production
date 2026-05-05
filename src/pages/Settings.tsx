@@ -3,6 +3,7 @@ import { Settings as SettingsIcon, Save, Database, Globe, Key, Download, Upload,
 import { AppConfig, User } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
+import { toast } from 'react-toastify';
 
 interface SettingsProps {
   config: AppConfig;
@@ -32,17 +33,17 @@ export default function Settings({ config, setConfig, currentUser, setUsers, use
       emailAlerts: formData.get('emailAlerts') === 'true',
       adminEmail: formData.get('adminEmail') as string,
     });
-    alert('تم حفظ الإعدادات بنجاح');
+    toast.success('تم حفظ الإعدادات بنجاح');
   };
 
   const testGoogleSync = async () => {
     if (!gsUrlInput) {
-      alert('الرجاء إدخال رابط Google Script أولاً');
+      toast.error('الرجاء إدخال رابط Google Script أولاً');
       return;
     }
 
     if (gsUrlInput && !gsUrlInput.startsWith('https://script.google.com/')) {
-      alert('⚠️ خطأ في الرابط: الرابط الذي أدخلته غير صحيح.\n\nيجب أن يبدأ الرابط بـ https://script.google.com/\n\nهذا الرابط ستحصل عليه من زر "Deploy" داخل Apps Script وليس من شريط العنوان في جوجل شيت.');
+      toast.warning('⚠️ رابط غير صالح: يرجى التأكد من الرابط الصحيح من زر Deploy في Apps Script');
       return;
     }
 
@@ -53,13 +54,13 @@ export default function Settings({ config, setConfig, currentUser, setUsers, use
         headers: { 'Content-Type': 'application/json' }
       });
       if (res.ok) {
-        alert('✅ تم الاتصال بنجاح! تحقق من أول صفحة في جدول البيانات الخاص بك.');
+        toast.success('✅ تم الاتصال بنجاح! تحقق من جدول البيانات.');
       } else {
         const err = await res.json();
-        alert(`❌ فشل الاتصال: ${err.error}\nتأكد أنك قمت بعمل Deploy كـ Web App وأن صلاحية الوصول هي Anyone.`);
+        toast.error(`❌ فشل الاتصال: ${err.error || 'خطأ مجهول'}`);
       }
     } catch (err) {
-      alert('❌ فشل الاتصال بالخادم');
+      toast.error('❌ فشل الاتصال بالخادم. تأكد من تشغيل البرنامج بشكل صحيح.');
     }
   };
 
@@ -67,22 +68,22 @@ export default function Settings({ config, setConfig, currentUser, setUsers, use
     e.preventDefault();
     if (!currentUser) return;
     if (passState.old !== currentUser.password) {
-      alert('كلمة المرور الحالية غير صحيحة');
+      toast.error('كلمة المرور الحالية غير صحيحة');
       return;
     }
     if (passState.new !== passState.confirm) {
-      alert('كلمات المرور الجديدة غير متطابقة');
+      toast.error('كلمات المرور الجديدة غير متطابقة');
       return;
     }
     if (passState.new.length < 4) {
-      alert('كلمة المرور قصيرة جداً');
+      toast.warn('كلمة المرور قصيرة جداً');
       return;
     }
 
     const updatedUsers = users.map(u => u.id === currentUser.id ? { ...u, password: passState.new } : u);
     setUsers(updatedUsers);
     setPassState({ old: '', new: '', confirm: '' });
-    alert('تم تغيير كلمة المرور بنجاح');
+    toast.success('تم تغيير كلمة المرور بنجاح');
   };
 
   const handleFileRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,10 +95,10 @@ export default function Settings({ config, setConfig, currentUser, setUsers, use
       try {
         const data = JSON.parse(event.target?.result as string);
         onRestore(data);
-        alert('تم استعادة البيانات بنجاح، سيتم إعادة تحميل التطبيق');
-        window.location.reload();
+        toast.success('تم استعادة البيانات بنجاح، سيتم إعادة تحميل التطبيق');
+        setTimeout(() => window.location.reload(), 2000);
       } catch (err) {
-        alert('ملف غير صالح');
+        toast.error('ملف غير صالح');
       }
     };
     reader.readAsText(file);

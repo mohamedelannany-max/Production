@@ -23,6 +23,7 @@ import { Order, Formula, OrderStatus, MaterialType, Batch, User } from '../types
 import { MATERIAL_TYPES } from '../constants';
 import { cn } from '../lib/utils';
 import Modal from '../components/Modal';
+import { toast } from 'react-toastify';
 
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -77,7 +78,7 @@ export default function Orders({ orders, setOrders, formulas, isAdmin, currentUs
   const handleCreateOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOrder.client || !newOrder.fmId || !newOrder.qty || !newOrder.bw) {
-      alert('يرجى ملء جميع الحقول الإلزامية');
+      toast.error('يرجى ملء جميع الحقول الإلزامية');
       return;
     }
 
@@ -151,7 +152,7 @@ export default function Orders({ orders, setOrders, formulas, isAdmin, currentUs
     const expectedBatchCount = Math.ceil((order.qty * 1000) / order.bw);
     
     if (nextBatchNumber > expectedBatchCount) {
-      alert('تم إنهاء جميع الباتشات المتوقعة');
+      toast.warning('تم إنهاء جميع الباتشات المتوقعة');
       return;
     }
 

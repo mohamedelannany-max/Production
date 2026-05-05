@@ -4,6 +4,7 @@ import { User } from '../types';
 import Modal from '../components/Modal';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { toast } from 'react-toastify';
 
 interface UsersPageProps {
   users: User[];
@@ -18,12 +19,12 @@ export default function UsersPage({ users, setUsers, currentUser }: UsersPagePro
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUser.username || !newUser.password || !newUser.name) {
-      alert('يرجى ملء كافة الحقول');
+      toast.error('يرجى ملء كافة الحقول');
       return;
     }
 
     if (users.find(u => u.username === newUser.username)) {
-      alert('اسم المستخدم موجود بالفعل');
+      toast.error('اسم المستخدم موجود بالفعل');
       return;
     }
 
@@ -34,11 +35,12 @@ export default function UsersPage({ users, setUsers, currentUser }: UsersPagePro
 
   const handleDelete = (id: string) => {
     if (id === currentUser?.id) {
-      alert('لا يمكنك حذف حسابك الحالي');
+      toast.warning('لا يمكنك حذف حسابك الحالي');
       return;
     }
-    if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+    if (window.confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
       setUsers(users.filter(u => u.id !== id));
+      toast.success('تم حذف المستخدم بنجاح');
     }
   };
 
