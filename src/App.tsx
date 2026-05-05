@@ -301,38 +301,129 @@ export default function App() {
         if (r.ok) {
           setIsOnline(true);
           setServerStatus(isSyncing ? 'syncing' : 'connected');
+          const data = await r.json();
+          // Merge with local state
+          if (data.users && data.users.length > 0) setUsers(data.users);
+          if (data.materials && data.materials.length > 0) setMaterials(data.materials);
+          if (data.formulas && data.formulas.length > 0) setFormulas(data.formulas);
+          if (data.orders && data.orders.length > 0) setOrders(data.orders);
+          if (data.inventory && data.inventory.length > 0) setInventory(data.inventory);
+          if (data.consumption && data.consumption.length > 0) setConsumption(data.consumption);
+          if (data.config) {
+            setConfig(data.config);
+            localStorage.setItem('pms_config', JSON.stringify(data.config));
+          }
         } else {
-          setIsOnline(false);
-          setServerStatus('disconnected');
+          throw new Error("Server not ok");
         }
       } catch (err) {
-        console.warn("Connection ping failed:", err);
+        console.warn("Server unreachable, entering standalone mode");
         setIsOnline(false);
         setServerStatus('disconnected');
+        
+        // Load from storage
+        const savedConfig = localStorage.getItem('pms_config');
+        if (savedConfig) {
+          const cfg = JSON.parse(savedConfig);
+          setConfig(prev => ({ ...prev, ...cfg, autoSave: true }));
+          
+          // Optionally try direct GS fetch if local server is down
+          if (cfg.gsUrl && materials.length === 0) {
+            console.log("Empty local state, pulling from Google Sheets...");
+            fetch(cfg.gsUrl)
+              .then(r => r.json())
+              .then(gsData => {
+                if (gsData && !gsData.error) {
+                  if (gsData.users) setUsers(gsData.users);
+                  if (gsData.materials) setMaterials(gsData.materials);
+                  if (gsData.formulas) setFormulas(gsData.formulas);
+                  if (gsData.orders) setOrders(gsData.orders);
+                  if (gsData.inventory) setInventory(gsData.inventory);
+                  if (gsData.consumption) setConsumption(gsData.consumption);
+                  toast.success("تم جلب البيانات من السحابة بنجاح");
+                  setServerStatus('syncing'); // Special state for standalone cloud
+                  setTimeout(() => setServerStatus('connected'), 2000);
+                  setIsOnline(true); // Treat as online if GS is reachable
+                }
+              })
+              .catch(e => console.error("Standalone GS fetch failed:", e));
+          }
+        }
       }
     };
     
-    const interval = setInterval(checkServer, 10000);
+    const interval = setInterval(checkServer, 15000);
     checkServer();
     return () => clearInterval(interval);
   }, [isSyncing]);
 
+  // Persist current data to localStorage as safety
+  useEffect(() => {
+    if (materials.length > 0) localStorage.setItem('pms_materials', JSON.stringify(materials));
+    if (formulas.length > 0) localStorage.setItem('pms_formulas', JSON.stringify(formulas));
+    if (orders.length > 0) localStorage.setItem('pms_orders', JSON.stringify(orders));
+    if (inventory.length > 0) localStorage.setItem('pms_inventory', JSON.stringify(inventory));
+    if (consumption.length > 0) localStorage.setItem('pms_consumption', JSON.stringify(consumption));
+    if (users.length > 0) localStorage.setItem('pms_users', JSON.stringify(users));
+  }, [materials, formulas, orders, inventory, consumption, users]);
+
+  // Try to load basic records from storage on first mount
+  useEffect(() => {
+    const m = localStorage.getItem('pms_materials');
+    const f = localStorage.getItem('pms_formulas');
+    const o = localStorage.getItem('pms_orders');
+    const i = localStorage.getItem('pms_inventory');
+    const c = localStorage.getItem('pms_consumption');
+    const u = localStorage.getItem('pms_users');
+    const cfg = localStorage.getItem('pms_config');
+
+    if (m) setMaterials(JSON.parse(m));
+    if (f) setFormulas(JSON.parse(f));
+    if (o) setOrders(JSON.parse(o));
+    if (i) setInventory(JSON.parse(i));
+    if (c) setConsumption(JSON.parse(c));
+    if (u) setUsers(JSON.parse(u));
+    if (cfg) setConfig(JSON.parse(cfg));
+  }, []);
+
   const handleFullSync = async () => {
-    if (!isOnline) return;
+    const isStandalone = !isOnline;
+    if (isStandalone && !config.gsUrl) {
+      toast.error("لا يمكن المزامنة السحابية بدون رابط Google Script");
+      return;
+    }
+    
     setIsSyncing(true);
     try {
-      const dbData = { users, materials, formulas, orders, inventory, config };
-      await fetch('/api/test-gs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          url: config.gsUrl, 
-          payload: { action: 'full_sync', data: dbData } 
-        })
-      });
+      const dbData = { users, materials, formulas, orders, inventory, consumption, config };
+      
+      if (isStandalone) {
+        // Direct to GS
+        console.log("📡 Attempting direct full sync to Google Sheets...");
+        await fetch(config.gsUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'full_sync', data: dbData }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          mode: 'no-cors'
+        });
+        toast.success("تم إرسال البيانات للسحابة (Direct Mode)");
+      } else {
+        // Via server relay
+        await fetch('/api/test-gs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            url: config.gsUrl, 
+            payload: { action: 'full_sync', data: dbData } 
+          })
+        });
+        toast.success("تمت المزامنة السحابية عبر الخادم بنجاح");
+      }
+      
       setLastSync(new Date().toLocaleTimeString('ar-EG'));
     } catch (err) {
       console.error("Full Sync Error:", err);
+      toast.error("فشلت المزامنة السحابية");
     } finally {
       setIsSyncing(false);
     }

@@ -57,6 +57,47 @@ function doPost(e) {
   }
 }
 
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var result = {
+      users: readEntity(ss, "Users"),
+      materials: readEntity(ss, "Materials"),
+      formulas: readEntity(ss, "Formulas"),
+      orders: readEntity(ss, "Orders"),
+      inventory: readEntity(ss, "Inventory"),
+      consumption: readEntity(ss, "Reports_Consumption")
+    };
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({error: err.message})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function readEntity(ss, name) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) return [];
+  var values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+  var headers = values[0];
+  return values.slice(1).map(function(row) {
+    var obj = {};
+    headers.forEach(function(h, i) {
+      var val = row[i];
+      try {
+        if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+          obj[h] = JSON.parse(val);
+        } else {
+          obj[h] = val;
+        }
+      } catch(e) {
+        obj[h] = val;
+      }
+    });
+    return obj;
+  });
+}
+
 function syncEntity(ss, sheetName, headers, items) {
   if (!items || items.length === 0) return;
   var sheet = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
